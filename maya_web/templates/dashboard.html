@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maya Tekstil — Kalan İzleme</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:        #060A10;
+  --bg2:       #090E1A;
+  --panel:     #0C1220;
+  --card:      #0F1828;
+  --card2:     #131E30;
+  --border:    #1A2740;
+  --border2:   #243550;
+  --accent:    #F57C37;
+  --accent2:   #FB9D62;
+  --accent-d:  #7A3912;
+  --emerald:   #10B981;
+  --rose:      #F43F5E;
+  --violet:    #8B5CF6;
+  --amber:     #F59E0B;
+  --text:      #E8F0FE;
+  --text2:     #8BA3CC;
+  --text3:     #4A6080;
+  --glass:     rgba(15,24,40,0.85);
+  --r:         12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  overflow-x: hidden;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius:3px; }
+
+/* ── LAYOUT ── */
+.app { display:flex; flex-direction:column; min-height:100vh; }
+
+/* ── HEADER ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 64px;
+  background: linear-gradient(90deg, rgba(20,32,58,.98) 0%, rgba(10,15,25,.95) 100%);
+  border-bottom: 1px solid rgba(245,124,55,.18);
+  position: sticky; top:0; z-index:100;
+}
+.header-left { display:flex; align-items:center; gap:16px; }
+.logo-text { font-size:18px; font-weight:900; letter-spacing:4px; color:var(--accent); }
+.logo-sep  { width:1px; height:28px; background:var(--border2); }
+.logo-sub  { font-size:10px; letter-spacing:2px; color:var(--text3); text-transform:uppercase; }
+
+.live-dot {
+  font-size:10px; font-weight:800; letter-spacing:2px;
+  background:rgba(16,185,129,.10); border:1px solid rgba(16,185,129,.25);
+  border-radius:5px; padding:3px 10px; color:#22D68A;
+  animation: blink 2s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.header-right { display:flex; align-items:center; gap:12px; }
+#ts-label { font-size:12px; color:var(--text3); font-family:monospace; }
+
+.btn-sm {
+  background:rgba(245,124,55,.08); border:1px solid rgba(245,124,55,.20);
+  border-radius:8px; color:var(--accent2); font-size:12px; font-weight:700;
+  padding:6px 14px; cursor:pointer; transition:all .2s; text-decoration:none;
+}
+.btn-sm:hover { background:rgba(245,124,55,.16); border-color:rgba(245,124,55,.40); }
+.btn-sm.danger { background:rgba(244,63,94,.06); border-color:rgba(244,63,94,.20); color:#F87F97; }
+.btn-sm.danger:hover { background:rgba(244,63,94,.12); border-color:rgba(244,63,94,.40); }
+
+/* ── NAV TABS ── */
+.nav-tabs {
+  display:flex; gap:4px;
+  padding: 12px 24px;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  background: var(--bg2);
+}
+.nav-tab {
+  padding:8px 20px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;
+  color:var(--text3); transition:all .2s; border:1px solid transparent;
+  letter-spacing:.5px;
+}
+.nav-tab:hover { color:var(--text2); background:rgba(255,255,255,.04); }
+.nav-tab.active {
+  background:rgba(245,124,55,.12); border-color:rgba(245,124,55,.28);
+  color:var(--accent2);
+}
+
+/* ── MAIN CONTENT ── */
+main { flex:1; padding:24px; display:flex; flex-direction:column; gap:20px; }
+
+/* ── KPI GRID ── */
+.kpi-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap:16px;
+}
+.kpi-card {
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:20px;
+  position:relative;
+  overflow:hidden;
+  transition:transform .2s, border-color .2s;
+}
+.kpi-card:hover { transform:translateY(-2px); border-color:var(--border2); }
+.kpi-card::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+  border-radius:2px 0 0 2px;
+  background: var(--stripe-color, var(--accent));
+}
+.kpi-card.ham  { --stripe-color: #4A9FFB; }
+.kpi-card.urun { --stripe-color: var(--emerald); }
+.kpi-card.kritik { --stripe-color: var(--rose); }
+.kpi-card.avg-h  { --stripe-color: var(--amber); }
+.kpi-card.avg-u  { --stripe-color: var(--violet); }
+
+.kpi-label { font-size:10px; font-weight:700; letter-spacing:1.8px; text-transform:uppercase; color:var(--text3); margin-bottom:10px; }
+.kpi-value { font-size:34px; font-weight:800; font-family:monospace; line-height:1; }
+.kpi-sub   { font-size:12px; color:var(--text3); margin-top:6px; font-family:monospace; }
+.kpi-card.ham .kpi-value   { color:#5AABFC; }
+.kpi-card.urun .kpi-value  { color:#26DE8E; }
+.kpi-card.kritik .kpi-value { color:#F04060; }
+.kpi-card.avg-h .kpi-value  { color:#F0A828; }
+.kpi-card.avg-u .kpi-value  { color:#C084FC; }
+
+/* ── CHART ROW ── */
+.chart-row {
+  display:grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap:16px;
+}
+@media(max-width:900px) { .chart-row { grid-template-columns:1fr; } }
+
+.chart-card {
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:20px;
+}
+.chart-title {
+  font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+  color:var(--text2); margin-bottom:16px;
+}
+.chart-wrap { position:relative; height:220px; }
+
+/* ── TABLE SECTION ── */
+.table-section {
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+.table-toolbar {
+  display:flex; gap:10px; align-items:center; padding:16px 20px;
+  border-bottom:1px solid rgba(255,255,255,.05); flex-wrap:wrap;
+}
+.search-box {
+  flex:1; min-width:200px;
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+  border-radius:8px; color:var(--text); font-size:14px; padding:9px 14px; outline:none;
+  transition:border-color .2s;
+}
+.search-box:focus { border-color:rgba(245,124,55,.40); background:rgba(245,124,55,.04); }
+
+.filter-select {
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+  border-radius:8px; color:var(--text2); font-size:13px; padding:9px 12px; outline:none; cursor:pointer;
+}
+.filter-select:focus { border-color:rgba(245,124,55,.40); }
+
+.toggle-kritik {
+  display:flex; align-items:center; gap:6px;
+  background:rgba(244,63,94,.06); border:1px solid rgba(244,63,94,.20);
+  border-radius:8px; color:#F87F97; font-size:12px; font-weight:700;
+  padding:9px 14px; cursor:pointer; transition:all .2s; white-space:nowrap;
+}
+.toggle-kritik.on { background:rgba(244,63,94,.16); border-color:rgba(244,63,94,.45); }
+
+.tbl-wrap { overflow-x:auto; max-height:460px; }
+
+table { width:100%; border-collapse:collapse; }
+thead th {
+  background:rgba(245,124,55,.05);
+  font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+  color:var(--text3); padding:12px 16px;
+  border-bottom:1px solid rgba(255,255,255,.06); text-align:left;
+  position:sticky; top:0; z-index:1;
+}
+tbody tr {
+  border-bottom:1px solid rgba(255,255,255,.03);
+  transition:background .15s;
+}
+tbody tr:hover { background:rgba(245,124,55,.05); }
+td { padding:11px 16px; font-size:13px; color:rgba(212,228,248,.9); }
+td.code { font-family:monospace; font-size:12px; color:var(--text2); }
+td.num  { font-family:monospace; font-weight:700; text-align:right; }
+td.gun  { font-family:monospace; text-align:center; }
+
+.badge {
+  display:inline-block; padding:2px 9px; border-radius:20px;
+  font-size:11px; font-weight:700;
+}
+.badge.ok    { background:rgba(16,185,129,.12); color:#26DE8E; border:1px solid rgba(16,185,129,.25); }
+.badge.warn  { background:rgba(245,158,11,.12);  color:#F0A828; border:1px solid rgba(245,158,11,.25); }
+.badge.crit  { background:rgba(244,63,94,.12);   color:#F04060; border:1px solid rgba(244,63,94,.25); }
+
+/* ── PAGINATION ── */
+.pagination {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 20px; border-top:1px solid rgba(255,255,255,.05);
+  font-size:12px; color:var(--text3); flex-wrap:wrap; gap:8px;
+}
+.pag-btns { display:flex; gap:6px; }
+.pag-btn {
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+  border-radius:6px; color:var(--text2); font-size:12px; padding:5px 12px;
+  cursor:pointer; transition:all .2s;
+}
+.pag-btn:hover:not(:disabled) { background:rgba(245,124,55,.10); border-color:rgba(245,124,55,.30); color:var(--accent2); }
+.pag-btn:disabled { opacity:.3; cursor:default; }
+
+/* ── LOADING ── */
+.spinner {
+  display:inline-block; width:16px; height:16px;
+  border:2px solid rgba(245,124,55,.2); border-top-color:var(--accent);
+  border-radius:50%; animation:spin .7s linear infinite;
+}
+@keyframes spin { to{ transform:rotate(360deg) } }
+
+/* ── PAGE SECTIONS ── */
+.page { display:none; }
+.page.active { display:flex; flex-direction:column; gap:20px; }
+
+/* ── SKELETON ── */
+.skeleton { background:linear-gradient(90deg,var(--card2) 25%,rgba(255,255,255,.04) 50%,var(--card2) 75%); background-size:200%; animation:shimmer 1.4s infinite; border-radius:6px; }
+@keyframes shimmer { from{background-position:200%} to{background-position:-200%} }
+.skel-val  { height:42px; width:100px; margin-bottom:6px; }
+.skel-sub  { height:14px; width:70px; }
+
+/* ── EMPTY STATE ── */
+.empty-state { text-align:center; padding:48px 20px; color:var(--text3); }
+.empty-state svg { opacity:.3; margin-bottom:12px; }
+
+/* ── TOAST ── */
+#toast {
+  position:fixed; bottom:28px; right:24px; z-index:9999;
+  background:var(--card2); border:1px solid var(--border2);
+  border-radius:10px; padding:12px 20px; font-size:13px; color:var(--text);
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+  transform:translateY(80px); opacity:0;
+  transition:all .3s cubic-bezier(.16,1,.3,1);
+  pointer-events:none; max-width:340px;
+}
+#toast.show { transform:translateY(0); opacity:1; }
+#toast.ok   { border-color:rgba(16,185,129,.40); }
+#toast.err  { border-color:rgba(244,63,94,.40); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <span class="logo-text">MAYA</span>
+      <div class="logo-sep"></div>
+      <span class="logo-sub">Kalan İzleme</span>
+      <span class="live-dot">● CANLI</span>
+    </div>
+    <div class="header-right">
+      <span id="ts-label">—</span>
+      <button class="btn-sm" id="btn-refresh">⟳ Yenile</button>
+      <a href="/logout" class="btn-sm danger">Çıkış</a>
+    </div>
+  </header>
+
+  <!-- NAV -->
+  <nav class="nav-tabs">
+    <div class="nav-tab active" data-page="dashboard">📊 Dashboard</div>
+    <div class="nav-tab" data-page="hammadde">🧵 Ham Madde</div>
+    <div class="nav-tab" data-page="urun">📦 Ürün</div>
+  </nav>
+
+  <main>
+
+    <!-- ── DASHBOARD PAGE ── -->
+    <div class="page active" id="page-dashboard">
+
+      <!-- KPI -->
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card ham"><div class="kpi-label">Ham Madde Kalan</div><div class="kpi-value skeleton skel-val" id="kpi-ham-val">—</div><div class="kpi-sub skeleton skel-sub" id="kpi-ham-sub">—</div></div>
+        <div class="kpi-card urun"><div class="kpi-label">Ürün Kalan</div><div class="kpi-value skeleton skel-val" id="kpi-urun-val">—</div><div class="kpi-sub skeleton skel-sub" id="kpi-urun-sub">—</div></div>
+        <div class="kpi-card kritik"><div class="kpi-label">Kritik Siparişler</div><div class="kpi-value skeleton skel-val" id="kpi-krit-val">—</div><div class="kpi-sub skeleton skel-sub" id="kpi-krit-sub">—</div></div>
+        <div class="kpi-card avg-h"><div class="kpi-label">Ort. Bekleme (Ham)</div><div class="kpi-value skeleton skel-val" id="kpi-avgh-val">—</div><div class="kpi-sub skeleton skel-sub">gün</div></div>
+        <div class="kpi-card avg-u"><div class="kpi-label">Ort. Bekleme (Ürün)</div><div class="kpi-value skeleton skel-val" id="kpi-avgu-val">—</div><div class="kpi-sub skeleton skel-sub">gün</div></div>
+      </div>
+
+      <!-- CHARTS -->
+      <div class="chart-row">
+        <div class="chart-card">
+          <div class="chart-title">Ham Madde — Bölüm Dağılımı</div>
+          <div class="chart-wrap"><canvas id="chart-ham-bolum"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Ürün — Bölüm Dağılımı</div>
+          <div class="chart-wrap"><canvas id="chart-urt-bolum"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Geçen Gün Dağılımı</div>
+          <div class="chart-wrap"><canvas id="chart-gun"></canvas></div>
+        </div>
+      </div>
+
+    </div><!-- /dashboard -->
+
+    <!-- ── HAM MADDE PAGE ── -->
+    <div class="page" id="page-hammadde">
+      <div class="table-section">
+        <div class="table-toolbar">
+          <input class="search-box" id="ham-search" placeholder="İş emri, model, bölüm ara…">
+          <select class="filter-select" id="ham-bolum"></select>
+          <button class="toggle-kritik" id="ham-kritik-btn">⚠ Sadece Kritik</button>
+        </div>
+        <div class="tbl-wrap">
+          <table id="ham-table">
+            <thead>
+              <tr>
+                <th>İş Emri No</th>
+                <th>Model Adı</th>
+                <th>Bölüm</th>
+                <th>Ham Madde</th>
+                <th style="text-align:right">Kalan</th>
+                <th style="text-align:center">Geçen Gün</th>
+              </tr>
+            </thead>
+            <tbody id="ham-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="ham-info">—</span>
+          <div class="pag-btns">
+            <button class="pag-btn" id="ham-prev" disabled>‹ Önceki</button>
+            <button class="pag-btn" id="ham-next">Sonraki ›</button>
+          </div>
+        </div>
+      </div>
+    </div><!-- /hammadde -->
+
+    <!-- ── ÜRÜN PAGE ── -->
+    <div class="page" id="page-urun">
+      <div class="table-section">
+        <div class="table-toolbar">
+          <input class="search-box" id="urt-search" placeholder="İş emri, model, bölüm ara…">
+          <select class="filter-select" id="urt-bolum"></select>
+          <button class="toggle-kritik" id="urt-kritik-btn">⚠ Sadece Kritik</button>
+        </div>
+        <div class="tbl-wrap">
+          <table id="urt-table">
+            <thead>
+              <tr>
+                <th>İş Emri No</th>
+                <th>Model Adı</th>
+                <th>Bölüm</th>
+                <th>Durum</th>
+                <th style="text-align:right">Kalan</th>
+                <th style="text-align:center">Geçen Gün</th>
+              </tr>
+            </thead>
+            <tbody id="urt-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="urt-info">—</span>
+          <div class="pag-btns">
+            <button class="pag-btn" id="urt-prev" disabled>‹ Önceki</button>
+            <button class="pag-btn" id="urt-next">Sonraki ›</button>
+          </div>
+        </div>
+      </div>
+    </div><!-- /urun -->
+
+  </main>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ── CHART.JS GLOBAL ──────────────────────────
+Chart.defaults.color     = '#8BA3CC';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+Chart.defaults.font.size   = 11;
+
+const ACCENT   = '#F57C37';
+const PALETTE  = ['#4A9FFB','#10B981','#F59E0B','#8B5CF6','#F43F5E','#06B6D4','#EC4899','#84CC16'];
+
+// ── TOAST ────────────────────────────────────
+function toast(msg, type='ok', dur=2800) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = 'show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = '', dur);
+}
+
+// ── PAGE TABS ────────────────────────────────
+const pages = {};
+document.querySelectorAll('.nav-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const id = 'page-' + btn.dataset.page;
+    document.getElementById(id).classList.add('active');
+    if (btn.dataset.page === 'hammadde' && !pages.ham_loaded) { loadTable('ham', 1); pages.ham_loaded = true; }
+    if (btn.dataset.page === 'urun'     && !pages.urt_loaded) { loadTable('urt', 1); pages.urt_loaded = true; }
+  });
+});
+
+// ── KPİ VE CHARTS ────────────────────────────
+async function loadDashboard() {
+  // KPİ
+  const r = await fetch('/api/ozet');
+  const d = await r.json();
+  if (!d.ok) return;
+
+  document.getElementById('ts-label').textContent = d.ts;
+
+  const fmt = n => n.toLocaleString('tr-TR');
+
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    el.classList.remove('skeleton','skel-val','skel-sub');
+    el.textContent = val;
+  };
+  set('kpi-ham-val',   fmt(d.ham.toplam_kalan));
+  set('kpi-ham-sub',   d.ham.siparis_say + ' sipariş');
+  set('kpi-urun-val',  fmt(d.urun.toplam_kalan));
+  set('kpi-urun-sub',  d.urun.siparis_say + ' sipariş');
+  set('kpi-krit-val',  d.ham.kritik_say + d.urun.kritik_say);
+  set('kpi-krit-sub',  '≥5 gün bekleyen');
+  set('kpi-avgh-val',  d.ham.ort_gun);
+  set('kpi-avgu-val',  d.urun.ort_gun);
+
+  // Bölüm chartları
+  const [rh, ru, rg] = await Promise.all([
+    fetch('/api/bolum_dagilim?tip=ham').then(r=>r.json()),
+    fetch('/api/bolum_dagilim?tip=urun').then(r=>r.json()),
+    fetch('/api/gun_dagilim').then(r=>r.json()),
+  ]);
+
+  const barCfg = (labels, values, label) => ({
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label, data: values,
+        backgroundColor: PALETTE.map(c => c + '55'),
+        borderColor:     PALETTE,
+        borderWidth: 1.5, borderRadius: 5,
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ grid:{color:'rgba(255,255,255,.04)'}, ticks:{maxRotation:40, font:{size:10}} },
+        y:{ grid:{color:'rgba(255,255,255,.04)'}, ticks:{font:{size:10}} }
+      }
+    }
+  });
+
+  new Chart(document.getElementById('chart-ham-bolum'),
+    barCfg(rh.labels, rh.values, 'Ham Madde Kalan'));
+  new Chart(document.getElementById('chart-urt-bolum'),
+    barCfg(ru.labels, ru.values, 'Ürün Kalan'));
+
+  // Gün dağılım — grouped bar
+  new Chart(document.getElementById('chart-gun'), {
+    type:'bar',
+    data:{
+      labels: rg.labels,
+      datasets:[
+        { label:'Ham Madde', data:rg.ham,  backgroundColor:'rgba(74,159,251,.55)', borderColor:'#4A9FFB', borderWidth:1.5, borderRadius:5 },
+        { label:'Ürün',      data:rg.urun, backgroundColor:'rgba(16,185,129,.55)', borderColor:'#10B981', borderWidth:1.5, borderRadius:5 },
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ boxWidth:12, padding:14 } } },
+      scales:{
+        x:{ grid:{color:'rgba(255,255,255,.04)'} },
+        y:{ grid:{color:'rgba(255,255,255,.04)'} }
+      }
+    }
+  });
+}
+
+// ── TABLO ─────────────────────────────────────
+const state = {
+  ham: { page:1, search:'', bolum:'', kritik:false, total:0 },
+  urt: { page:1, search:'', bolum:'', kritik:false, total:0 },
+};
+const LIMIT = 50;
+
+function gunBadge(g) {
+  if (g == null) return '<td class="gun">—</td>';
+  const cls = g >= 10 ? 'crit' : g >= 5 ? 'warn' : 'ok';
+  return `<td class="gun"><span class="badge ${cls}">${g}g</span></td>`;
+}
+
+function renderHamRow(r) {
+  return `<tr>
+    <td class="code">${r.IsEmriNo||'—'}</td>
+    <td>${r.MModelAdi||'—'}</td>
+    <td>${r.UretimBolumAdi||'—'}</td>
+    <td>${r.HModelAdi||'—'}</td>
+    <td class="num">${(r.UretimSonuKalan||0).toLocaleString('tr-TR')}</td>
+    ${gunBadge(r.GeçenGün)}
+  </tr>`;
+}
+function renderUrtRow(r) {
+  const dur = r.AcikKapali === 'Kapalı'
+    ? '<span class="badge ok">Kapalı</span>'
+    : '<span class="badge warn">Açık</span>';
+  return `<tr>
+    <td class="code">${r.IsEmriNo||'—'}</td>
+    <td>${r.MModelAdi||'—'}</td>
+    <td>${r.UretimBolumAdi||'—'}</td>
+    <td>${dur}</td>
+    <td class="num">${(r.Kalan||0).toLocaleString('tr-TR')}</td>
+    ${gunBadge(r.GeçenGün)}
+  </tr>`;
+}
+
+async function loadTable(tip, page) {
+  const s   = state[tip];
+  s.page    = page;
+  const tbody = document.getElementById(tip === 'ham' ? 'ham-tbody' : 'urt-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text3)"><div class="spinner"></div></td></tr>';
+
+  const params = new URLSearchParams({
+    tip: tip === 'ham' ? 'ham' : 'urun',
+    page, limit: LIMIT,
+    q: s.search, bolum: s.bolum,
+    kritik: s.kritik
+  });
+  const r = await fetch('/api/tablo?' + params);
+  const d = await r.json();
+  if (!d.ok) { toast('Veri yüklenemedi', 'err'); return; }
+
+  s.total = d.total;
+  const rows = d.rows;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Kayıt bulunamadı</td></tr>';
+  } else {
+    tbody.innerHTML = rows.map(tip === 'ham' ? renderHamRow : renderUrtRow).join('');
+  }
+
+  const from  = (page - 1) * LIMIT + 1;
+  const to    = Math.min(page * LIMIT, d.total);
+  const infoId = tip === 'ham' ? 'ham-info' : 'urt-info';
+  document.getElementById(infoId).textContent =
+    `${from}–${to} / ${d.total.toLocaleString('tr-TR')} kayıt`;
+
+  const prevId = tip === 'ham' ? 'ham-prev' : 'urt-prev';
+  const nextId = tip === 'ham' ? 'ham-next' : 'urt-next';
+  document.getElementById(prevId).disabled = page <= 1;
+  document.getElementById(nextId).disabled = to >= d.total;
+}
+
+async function loadBolumFilter(tip) {
+  const r = await fetch(`/api/bolumler?tip=${tip === 'ham' ? 'ham' : 'urun'}`);
+  const d = await r.json();
+  const sel = document.getElementById(tip === 'ham' ? 'ham-bolum' : 'urt-bolum');
+  sel.innerHTML = '<option value="">Tüm Bölümler</option>' +
+    (d.bolumler || []).map(b => `<option>${b}</option>`).join('');
+}
+
+// ── SEARCH & FILTER OLAYLAR ──────────────────
+let searchTimer;
+function wireTable(tip) {
+  const searchEl = document.getElementById(tip + '-search');
+  const bolumEl  = document.getElementById(tip + '-bolum');
+  const kritikEl = document.getElementById(tip + '-kritik-btn');
+
+  searchEl.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      state[tip].search = searchEl.value.trim();
+      loadTable(tip, 1);
+    }, 350);
+  });
+  bolumEl.addEventListener('change', () => {
+    state[tip].bolum = bolumEl.value;
+    loadTable(tip, 1);
+  });
+  kritikEl.addEventListener('click', () => {
+    state[tip].kritik = !state[tip].kritik;
+    kritikEl.classList.toggle('on', state[tip].kritik);
+    loadTable(tip, 1);
+  });
+
+  document.getElementById(tip + '-prev').addEventListener('click', () => loadTable(tip, state[tip].page - 1));
+  document.getElementById(tip + '-next').addEventListener('click', () => loadTable(tip, state[tip].page + 1));
+}
+
+wireTable('ham');
+wireTable('urt');
+loadBolumFilter('ham');
+loadBolumFilter('urt');
+
+// ── REFRESH ──────────────────────────────────
+document.getElementById('btn-refresh').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-refresh');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="vertical-align:middle"></div>';
+  try {
+    const r = await fetch('/api/refresh', {method:'POST'});
+    const d = await r.json();
+    if (d.ok) {
+      toast('✓ ' + d.msg, 'ok');
+      loadDashboard();
+      if (pages.ham_loaded) loadTable('ham', 1);
+      if (pages.urt_loaded) loadTable('urt', 1);
+    } else {
+      toast('Hata: ' + d.error, 'err');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⟳ Yenile';
+  }
+});
+
+// ── İLK YÜK ─────────────────────────────────
+loadDashboard();
+
+// Otomatik güncelleme (5 dk)
+setInterval(() => {
+  loadDashboard();
+  if (pages.ham_loaded) loadTable('ham', state.ham.page);
+  if (pages.urt_loaded) loadTable('urt', state.urt.page);
+}, 5 * 60 * 1000);
+</script>
+</body>
+</html>

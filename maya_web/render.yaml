@@ -1,0 +1,15 @@
+# render.yaml — Render.com ücretsiz plan için deploy config
+# https://render.com → New Web Service → GitHub reposunu bağla → otomatik deploy
+
+services:
+  - type: web
+    name: maya-kalan-izleme
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_DEBUG
+        value: "false"
+    plan: free
